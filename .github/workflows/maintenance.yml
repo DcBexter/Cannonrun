@@ -1,0 +1,52 @@
+name: Maintenance
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    - cron: '41 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Static preservation checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate GitHub workflows
+        uses: docker://rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: JavaScript syntax
+        run: git ls-files -z '*.js' | xargs -0 -r -n1 node --check
+      - name: Prototype entry point and local assets
+        run: |
+          test -s public_html/index.html
+          test -s public_html/src/cannonrun3000.js
+          test -s public_html/js/libs/crafty/crafty.js
+          test -s public_html/img/backgrounds/map.jpg
+
+  dependencies:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+
+  required:
+    name: Required maintenance
+    if: always()
+    needs: [checks, dependencies]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require preservation and dependency checks
+        env:
+          CHECKS: ${{ needs.checks.result }}
+          DEPENDENCIES: ${{ needs.dependencies.result }}
+        run: test "$CHECKS" = success && { test "$DEPENDENCIES" = success || test "$DEPENDENCIES" = skipped; }
