@@ -21,7 +21,7 @@ jobs:
         uses: docker://rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24'
+          node-version: '26'
       - name: JavaScript syntax
         run: git ls-files -z '*.js' | xargs -0 -r -n1 node --check
       - name: Prototype entry point and local assets
